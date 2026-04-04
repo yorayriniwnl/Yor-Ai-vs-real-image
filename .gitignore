@@ -1,0 +1,22 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Local model artifacts
+*.pkl
+
+# Notebook and temp outputs
+.ipynb_checkpoints/
+*.log
