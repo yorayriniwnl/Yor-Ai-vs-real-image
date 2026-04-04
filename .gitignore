@@ -16,6 +16,8 @@ Thumbs.db
 
 # Local model artifacts
 *.pkl
+!scaler.pkl
+!svm_model.pkl
 
 # Notebook and temp outputs
 .ipynb_checkpoints/

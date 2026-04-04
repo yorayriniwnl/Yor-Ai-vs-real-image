@@ -1,6 +1,6 @@
-streamlit
+flask
 numpy
 joblib
-opencv-python
+opencv-python-headless
 scikit-image
 scikit-learn

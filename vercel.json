@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "index.py": {
+      "maxDuration": 30,
+      "excludeFiles": "{dataset/**,.venv/**,.venv-1/**,__pycache__/**,app.py,convert_all_avif.py,dataset_builder.py,feature_vector.py,final_train.py,glcm_features.py,grayscale.py,imageaq.py,lbp_features.py,noise_analysis.py,normalize.py,predict.py,resize.py,svm_model.py,train_model.py}"
+    }
+  }
+}

@@ -37,10 +37,10 @@ The dataset consists of real and AI-generated landscape images.
 
 > Note: The full dataset is not included in this repository due to size and licensing constraints.
 
-## Install dependencies
+## Install local Streamlit dependencies
 
 ```bat
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-local.txt
 ```
 
 ## Train the model
@@ -54,6 +54,12 @@ The dataset consists of real and AI-generated landscape images.
 ```bat
 RunFile.bat
 ```
+
+## Deploy on Vercel
+
+- Vercel uses the Flask entrypoint in `index.py`
+- Root `requirements.txt` contains the lean deployment dependencies
+- The trained model files `svm_model.pkl` and `scaler.pkl` must stay committed so deployments can run inference
 
 ## How It Works
 
