@@ -1,0 +1,9 @@
+# Ignore everything by default for Vercel deployments.
+/*
+
+# Allow only the files needed by the Flask deployment.
+!index.py
+!inference.py
+!requirements.txt
+!svm_model.pkl
+!scaler.pkl
