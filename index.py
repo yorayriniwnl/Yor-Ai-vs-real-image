@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from flask import Flask, jsonify, render_template_string, request
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -12,37 +15,44 @@ from inference import (
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
+ROOT = Path(__file__).resolve().parent
+YOR_TOKENS = json.loads((ROOT / "design" / "yor-tokens.json").read_text(encoding="utf-8"))
+YOR_COLORS = YOR_TOKENS["color"]
+YOR_SEMANTIC = YOR_TOKENS["semantic"]
 
 PAGE_TEMPLATE = """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI vs Real Image Detector</title>
+  <title>YOR // Texture Forensics</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Mono:wght@400;500;600&display=swap');
     :root {
-      --bg: #07111f;
-      --panel: rgba(9, 18, 35, 0.82);
-      --panel-strong: rgba(5, 12, 24, 0.92);
-      --border: rgba(142, 197, 252, 0.22);
-      --text: #eff6ff;
-      --muted: #9db0c8;
-      --accent: #69e2c2;
-      --accent-soft: rgba(105, 226, 194, 0.18);
-      --danger: #ff8f8f;
+      --bg: __YOR_VOID__;
+      --panel: rgba(5, 5, 5, 0.82);
+      --panel-strong: rgba(0, 0, 0, 0.92);
+      --border: rgba(255, 138, 127, 0.22);
+      --text: __YOR_PAPER__;
+      --muted: __YOR_MUTED__;
+      --accent: __YOR_CRIMSON__;
+      --accent-soft: rgba(232, 75, 75, 0.18);
+      --danger: __YOR_SIGNAL__;
       --shadow: 0 30px 90px rgba(0, 0, 0, 0.34);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Segoe UI", Arial, sans-serif;
+      font-family: "DM Mono", Consolas, monospace;
       color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(102, 126, 234, 0.26), transparent 34%),
-        radial-gradient(circle at top right, rgba(105, 226, 194, 0.2), transparent 28%),
-        linear-gradient(160deg, #030812 0%, #0b1830 46%, #07111f 100%);
+        radial-gradient(circle at top left, rgba(103, 21, 21, 0.26), transparent 34%),
+        radial-gradient(circle at top right, rgba(232, 75, 75, 0.2), transparent 28%),
+        linear-gradient(160deg, __YOR_VOID__ 0%, __YOR_PANEL__ 46%, __YOR_VOID__ 100%);
     }
+    h1, h2 { font-family: Georgia, "Times New Roman", serif; letter-spacing: -0.03em; }
+    .eyebrow, .stat span, .inline-note, code { font-family: "DM Mono", Consolas, monospace; }
     .shell {
       width: min(1120px, calc(100% - 32px));
       margin: 0 auto;
@@ -72,16 +82,16 @@ PAGE_TEMPLATE = """<!doctype html>
       inset: auto -70px -70px auto;
       width: 200px;
       height: 200px;
-      background: radial-gradient(circle, rgba(105, 226, 194, 0.26), transparent 70%);
+      background: radial-gradient(circle, rgba(232, 75, 75, 0.26), transparent 70%);
       pointer-events: none;
     }
     .eyebrow {
       display: inline-flex;
       padding: 8px 12px;
       border-radius: 999px;
-      border: 1px solid rgba(105, 226, 194, 0.24);
-      background: rgba(105, 226, 194, 0.08);
-      color: #b7ffed;
+      border: 1px solid rgba(232, 75, 75, 0.24);
+      background: rgba(232, 75, 75, 0.08);
+      color: __YOR_PAPER__;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       font-size: 12px;
@@ -142,13 +152,13 @@ PAGE_TEMPLATE = """<!doctype html>
       display: block;
       padding: 22px;
       border-radius: 20px;
-      border: 1px dashed rgba(142, 197, 252, 0.35);
+      border: 1px dashed rgba(255, 138, 127, 0.35);
       background: rgba(255, 255, 255, 0.03);
       cursor: pointer;
       transition: border-color 0.2s ease, transform 0.2s ease;
     }
     .upload-box:hover {
-      border-color: rgba(105, 226, 194, 0.54);
+      border-color: rgba(232, 75, 75, 0.54);
       transform: translateY(-1px);
     }
     input[type="file"] {
@@ -166,15 +176,15 @@ PAGE_TEMPLATE = """<!doctype html>
       padding: 14px 18px;
       font-size: 15px;
       font-weight: 700;
-      color: #04111e;
-      background: linear-gradient(135deg, #69e2c2 0%, #8ec5fc 100%);
+      color: __YOR_VOID__;
+      background: linear-gradient(135deg, __YOR_CRIMSON__ 0%, __YOR_SIGNAL__ 100%);
       cursor: pointer;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
-      box-shadow: 0 18px 36px rgba(105, 226, 194, 0.24);
+      box-shadow: 0 18px 36px rgba(232, 75, 75, 0.24);
     }
     button:hover {
       transform: translateY(-1px);
-      box-shadow: 0 24px 46px rgba(105, 226, 194, 0.32);
+      box-shadow: 0 24px 46px rgba(232, 75, 75, 0.32);
     }
     .inline-note {
       font-size: 13px;
@@ -184,9 +194,9 @@ PAGE_TEMPLATE = """<!doctype html>
       margin-top: 24px;
       padding: 14px 16px;
       border-radius: 16px;
-      border: 1px solid rgba(255, 143, 143, 0.34);
-      background: rgba(255, 143, 143, 0.08);
-      color: #ffd5d5;
+      border: 1px solid rgba(255, 138, 127, 0.34);
+      background: rgba(255, 138, 127, 0.08);
+      color: __YOR_PAPER__;
     }
     .result-grid {
       display: grid;
@@ -216,14 +226,14 @@ PAGE_TEMPLATE = """<!doctype html>
       padding: 10px 14px;
       border-radius: 999px;
       background: var(--accent-soft);
-      border: 1px solid rgba(105, 226, 194, 0.24);
-      color: #d8fff5;
+      border: 1px solid rgba(232, 75, 75, 0.24);
+      color: __YOR_PAPER__;
       font-weight: 700;
     }
     .pill.danger {
-      background: rgba(255, 143, 143, 0.12);
-      border-color: rgba(255, 143, 143, 0.24);
-      color: #ffe2e2;
+      background: rgba(255, 138, 127, 0.12);
+      border-color: rgba(255, 138, 127, 0.24);
+      color: __YOR_PAPER__;
     }
     .score-row {
       display: grid;
@@ -255,7 +265,7 @@ PAGE_TEMPLATE = """<!doctype html>
       line-height: 1.8;
     }
     code {
-      color: #d3e9ff;
+      color: __YOR_PAPER__;
       font-family: Consolas, "Courier New", monospace;
       font-size: 0.95em;
     }
@@ -271,16 +281,24 @@ PAGE_TEMPLATE = """<!doctype html>
         padding: 22px;
       }
     }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
   </style>
 </head>
 <body>
   <main class="shell">
     <section class="hero">
       <article class="panel intro">
-        <span class="eyebrow">Classical ML Detector</span>
-        <h1>AI or real? Check an image in seconds.</h1>
+        <span class="eyebrow">YOR // Texture Forensics</span>
+        <h1>Can texture separate the signal from the synthetic?</h1>
         <p class="lede">
-          This deployment runs the trained SVM model from the repository and inspects texture,
+          This local inference surface runs the checked-in SVM model and inspects texture,
           noise, and grayscale structure to estimate whether an uploaded image is AI-generated.
         </p>
         <div class="stats">
@@ -301,13 +319,13 @@ PAGE_TEMPLATE = """<!doctype html>
 
       <form class="panel form-panel" method="post" enctype="multipart/form-data">
         <h2>Upload an image</h2>
-        <p>Use a JPG or PNG file and the app will return the estimated AI probability plus confidence.</p>
+        <p>Use a JPG or PNG file. The classifier returns an estimated AI probability and confidence, not a universal authenticity guarantee.</p>
         <label class="upload-box">
           <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" required>
           <div class="filename" id="filename">No file selected yet.</div>
         </label>
-        <button type="submit">Analyze image</button>
-        <div class="inline-note">API clients can also POST multipart form data to <code>/api/predict</code>.</div>
+        <button type="submit">Acquire signal</button>
+        <div class="inline-note">API clients can POST multipart form data to <code>/api/predict</code>. Uploaded bytes are processed for this request.</div>
       </form>
     </section>
 
@@ -369,8 +387,20 @@ def _read_upload():
 
 
 def _render_page(*, error=None, result=None, preview_url=None):
+    template = PAGE_TEMPLATE
+    for marker, value in {
+        "__YOR_VOID__": YOR_COLORS["void"],
+        "__YOR_PANEL__": YOR_COLORS["panel"],
+        "__YOR_CRIMSON__": YOR_COLORS["crimson"],
+        "__YOR_DEEP__": YOR_COLORS["deepCrimson"],
+        "__YOR_SIGNAL__": YOR_COLORS["signal"],
+        "__YOR_PAPER__": YOR_COLORS["paper"],
+        "__YOR_MUTED__": YOR_COLORS["muted"],
+        "__YOR_POSITIVE__": YOR_SEMANTIC["positive"],
+    }.items():
+        template = template.replace(marker, value)
     return render_template_string(
-        PAGE_TEMPLATE,
+        template,
         error=error,
         max_upload_mb=MAX_UPLOAD_MB,
         preview_url=preview_url,

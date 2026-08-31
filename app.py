@@ -8,11 +8,16 @@ import streamlit.components.v1 as components
 import numpy as np
 import joblib
 import cv2
+from pathlib import Path
 from skimage.feature import local_binary_pattern, graycomatrix, graycoprops
 from sklearn.model_selection import train_test_split
 
 MAX_UPLOAD_MB = 25
 UPLOAD_HINT = f"Limit {MAX_UPLOAD_MB}MB per file - JPG, PNG, JPEG"
+ROOT = Path(__file__).resolve().parent
+YOR_TOKENS = json.loads((ROOT / "design" / "yor-tokens.json").read_text(encoding="utf-8"))
+YOR_COLORS = YOR_TOKENS["color"]
+YOR_SEMANTIC = YOR_TOKENS["semantic"]
 
 # -------------------------
 # Load Model & Scaler
@@ -188,10 +193,11 @@ UI_TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>AI vs Real Image Detector</title>
+<title>YOR // Texture Forensics</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Mono:wght@400;500;600&display=swap');
   *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#05070F;overflow:hidden;font-family:'SF Pro Display','Segoe UI',system-ui,sans-serif}
+  body{background:#000000;overflow:hidden;font-family:'DM Mono',Consolas,monospace}
   #root{position:fixed;inset:0;width:100%;height:100%}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
@@ -200,9 +206,28 @@ UI_TEMPLATE = r"""<!DOCTYPE html>
   @keyframes ripple{0%{transform:scale(0);opacity:.8}100%{transform:scale(4);opacity:0}}
   @keyframes shimmer{0%{left:-60%}100%{left:160%}}
   @keyframes spin{to{transform:rotate(360deg)}}
-  @keyframes breathe{0%,100%{box-shadow:0 0 20px rgba(0,229,168,.05),0 0 60px rgba(91,140,255,.03)}50%{box-shadow:0 0 40px rgba(0,229,168,.12),0 0 80px rgba(91,140,255,.06)}}
+  @keyframes breathe{0%,100%{box-shadow:0 0 20px rgba(232,75,75,.05),0 0 60px rgba(255,138,127,.03)}50%{box-shadow:0 0 40px rgba(232,75,75,.12),0 0 80px rgba(255,138,127,.06)}}
   @keyframes trailFade{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(.5)}}
   @keyframes dataScroll{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
+  @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+  .yor-shell{isolation:isolate}
+  .yor-main{overflow:hidden}
+  @media (max-width: 920px){
+    body{overflow:auto}
+    #root{position:relative;min-height:100vh;height:auto;overflow:visible}
+    .yor-shell{position:relative!important;min-height:100vh;height:auto!important;overflow:visible!important}
+    .yor-header{padding:12px 16px!important}
+    .yor-nav{display:none!important}
+    .yor-main{height:auto!important;min-height:calc(100vh - 64px);flex-direction:column;align-items:stretch!important;justify-content:flex-start!important;padding:16px!important;gap:14px!important;overflow:visible!important}
+    .yor-side-panel{width:100%!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px!important}
+    .yor-center-shell{width:100%!important;max-width:520px;align-self:center}
+    .yor-card{padding:20px!important}
+  }
+  @media (max-width: 560px){
+    .yor-side-panel{grid-template-columns:1fr!important}
+    .yor-center-shell{max-width:none}
+    .yor-card{padding:16px!important}
+  }
   canvas{display:block}
 </style>
 </head>
@@ -218,7 +243,12 @@ const INITIAL_DATA = __INITIAL_DATA__;
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
 const h=React.createElement;
 
-const C={primary:'#00E5A8',secondary:'#5B8CFF',danger:'#FF4D4D',bg:'#05070F',bgDark:'#020409'};
+const C={primary:'__YOR_CRIMSON__',secondary:'__YOR_SIGNAL__',danger:'__YOR_SIGNAL__',bg:'__YOR_VOID__',bgDark:'__YOR_PANEL__',muted:'__YOR_MUTED__'};
+const hexToRgb=hex=>{
+  const value=parseInt(hex.replace('#',''),16);
+  return [(value>>16&255)/255,(value>>8&255)/255,(value&255)/255];
+};
+const RGB={primary:hexToRgb(C.primary),secondary:hexToRgb(C.secondary),muted:hexToRgb(C.muted)};
 
 // ── THREE.JS BACKGROUND ──────────────────────────────────────────────────────
 function initThree(canvas, mouseRef){
@@ -229,10 +259,10 @@ function initThree(canvas, mouseRef){
   const pixelRatio=Math.min(devicePixelRatio,lowEnd?1.25:2);
   renderer.setPixelRatio(pixelRatio);
   renderer.setSize(W,H);
-  renderer.setClearColor(0x05070F,1);
+  renderer.setClearColor(0x000000,1);
 
   const scene=new THREE.Scene();
-  scene.fog=new THREE.FogExp2(0x020409,.008);
+  scene.fog=new THREE.FogExp2(0x050505,.008);
   const camera=new THREE.PerspectiveCamera(60,W/H,.1,1000);
   camera.position.z=80;
 
@@ -245,9 +275,8 @@ function initThree(canvas, mouseRef){
     pos[i*3+1]=r*Math.sin(phi)*Math.sin(theta);
     pos[i*3+2]=r*Math.cos(phi);
     const t=Math.random();
-    if(t<.4){col[i*3]=0;col[i*3+1]=.9;col[i*3+2]=.66;}
-    else if(t<.7){col[i*3]=.36;col[i*3+1]=.55;col[i*3+2]=1;}
-    else{col[i*3]=.2;col[i*3+1]=.3;col[i*3+2]=.5;}
+    const tone=t<.42?RGB.primary:t<.72?RGB.secondary:RGB.muted;
+    col[i*3]=tone[0];col[i*3+1]=tone[1];col[i*3+2]=tone[2];
   }
   const pGeo=new THREE.BufferGeometry();
   pGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));
@@ -273,7 +302,7 @@ function initThree(canvas, mouseRef){
       if(bi<=ai)return;
       if(a.distanceTo(b)<lineDist&&Math.random()<lineChance){
         const g=new THREE.BufferGeometry().setFromPoints([a,b]);
-        const m=new THREE.LineBasicMaterial({color:Math.random()>.5?0x00E5A8:0x5B8CFF,transparent:true,opacity:.04});
+        const m=new THREE.LineBasicMaterial({color:Math.random()>.5?0xe84b4b:0xff8a7f,transparent:true,opacity:.04});
         lineGroup.add(new THREE.Line(g,m));
         lineData.push({base:.02+Math.random()*.06,phase:Math.random()*Math.PI*2,spd:.5+Math.random()*2});
       }
@@ -286,7 +315,7 @@ function initThree(canvas, mouseRef){
   nodes.forEach(v=>{
     const s=new THREE.Mesh(
       new THREE.SphereGeometry(.4,6,6),
-      new THREE.MeshBasicMaterial({color:Math.random()>.5?0x00E5A8:0x5B8CFF,transparent:true,opacity:.3})
+      new THREE.MeshBasicMaterial({color:Math.random()>.5?0xe84b4b:0xff8a7f,transparent:true,opacity:.3})
     );
     s.position.copy(v);nGroup.add(s);
   });
@@ -294,7 +323,7 @@ function initThree(canvas, mouseRef){
 
   // Floating wireframe orbs
   const orbGroup=new THREE.Group();
-  [{c:0x00E5A8,x:40,y:-20,z:-30,r:8},{c:0x5B8CFF,x:-50,y:30,z:-50,r:12},{c:0x00E5A8,x:0,y:0,z:-60,r:15}].forEach(o=>{
+  [{c:0xe84b4b,x:40,y:-20,z:-30,r:8},{c:0xff8a7f,x:-50,y:30,z:-50,r:12},{c:0xe84b4b,x:0,y:0,z:-60,r:15}].forEach(o=>{
     const mesh=new THREE.Mesh(
       new THREE.SphereGeometry(o.r,24,24),
       new THREE.MeshBasicMaterial({color:o.c,transparent:true,opacity:.025,wireframe:true})
@@ -303,8 +332,8 @@ function initThree(canvas, mouseRef){
   });
   scene.add(orbGroup);
 
-  const pl1=new THREE.PointLight(0x00E5A8,2,150);pl1.position.set(50,30,20);scene.add(pl1);
-  const pl2=new THREE.PointLight(0x5B8CFF,1.5,150);pl2.position.set(-50,-20,10);scene.add(pl2);
+  const pl1=new THREE.PointLight(0xe84b4b,2,150);pl1.position.set(50,30,20);scene.add(pl1);
+  const pl2=new THREE.PointLight(0xff8a7f,1.5,150);pl2.position.set(-50,-20,10);scene.add(pl2);
 
   let frame=0,id;
   const tick=()=>{
@@ -399,15 +428,15 @@ function ScanCanvas({imageUrl,onComplete}){
         ctx.clearRect(0,0,W,H);
         ctx.drawImage(img,0,0,W,H);
         // dark unscanned region
-        ctx.fillStyle='rgba(2,4,9,.5)';ctx.fillRect(0,scanY,W,H-scanY);
+        ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,scanY,W,H-scanY);
         // grid overlay
-        ctx.strokeStyle='rgba(0,229,168,.12)';ctx.lineWidth=.5;
+        ctx.strokeStyle='rgba(232,75,75,.12)';ctx.lineWidth=.5;
         const g=20;
         for(let x=0;x<W;x+=g){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,Math.min(scanY,H));ctx.stroke();}
         for(let y=0;y<=Math.min(scanY,H);y+=g){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
         // corner brackets
         if(frame>20){
-          const a=Math.min((frame-20)/25,.85);ctx.strokeStyle=`rgba(0,229,168,${a})`;ctx.lineWidth=1.5;
+          const a=Math.min((frame-20)/25,.85);ctx.strokeStyle=`rgba(232,75,75,${a})`;ctx.lineWidth=1.5;
           corners.forEach(c=>{
             const cs=12;ctx.beginPath();
             ctx.moveTo(c.x+cs,c.y);ctx.lineTo(c.x,c.y);ctx.lineTo(c.x,c.y+cs);
@@ -420,16 +449,16 @@ function ScanCanvas({imageUrl,onComplete}){
         // scan beam gradient
         if(scanY<H){
           const gr=ctx.createLinearGradient(0,scanY-35,0,scanY+5);
-          gr.addColorStop(0,'rgba(0,229,168,0)');
-          gr.addColorStop(.7,'rgba(0,229,168,.2)');
-          gr.addColorStop(1,'rgba(0,229,168,.6)');
+          gr.addColorStop(0,'rgba(232,75,75,0)');
+          gr.addColorStop(.7,'rgba(232,75,75,.2)');
+          gr.addColorStop(1,'rgba(232,75,75,.6)');
           ctx.fillStyle=gr;ctx.fillRect(0,scanY-35,W,40);
-          ctx.strokeStyle='rgba(0,229,168,.95)';ctx.lineWidth=1.5;
+          ctx.strokeStyle='rgba(232,75,75,.95)';ctx.lineWidth=1.5;
           ctx.beginPath();ctx.moveTo(0,scanY);ctx.lineTo(W,scanY);ctx.stroke();
           // scan particles
           for(let px=0;px<W;px+=12){
             if(Math.random()>.65){
-              ctx.fillStyle=`rgba(0,229,168,${Math.random()*.7+.2})`;
+              ctx.fillStyle=`rgba(232,75,75,${Math.random()*.7+.2})`;
               ctx.beginPath();ctx.arc(px+Math.random()*8,scanY+(Math.random()-.5)*4,Math.random()*1.5+.5,0,Math.PI*2);ctx.fill();
             }
           }
@@ -438,14 +467,14 @@ function ScanCanvas({imageUrl,onComplete}){
         if(frame>50){
           ctx.font='9px monospace';
           for(let di=0;di<4;di++){
-            ctx.fillStyle=`rgba(0,229,168,${Math.random()*.35})`;
+            ctx.fillStyle=`rgba(232,75,75,${Math.random()*.35})`;
             ctx.fillText(Math.random().toString(36).slice(2,8).toUpperCase(),di%2===0?4:W-44,Math.random()*scanY);
           }
         }
         // status text
-        ctx.font='bold 10px monospace';ctx.fillStyle='rgba(0,229,168,.9)';
+        ctx.font='bold 10px monospace';ctx.fillStyle='rgba(232,75,75,.9)';
         ctx.fillText(`ANALYZING... ${Math.floor(frame/total*100)}%`,10,H-10);
-        ctx.fillStyle='rgba(91,140,255,.7)';
+        ctx.fillStyle='rgba(255,138,127,.7)';
         ctx.fillText(`FREQ SCAN`,W-72,H-10);
         if(frame<total)id=requestAnimationFrame(tick);else onComplete();
       };
@@ -570,11 +599,11 @@ function App(){
   const showFooter=footerItems.length>0||!!footerNote;
   const summaryText=resultSummary||(result?(result.isReal?'No strong generative artifacts detected':'High likelihood of synthetic artifacts'):'');
 
-  return h('div',{style:{position:'fixed',inset:0,background:C.bg,overflow:'hidden',fontFamily:"'SF Pro Display','Segoe UI',system-ui,sans-serif"}},
+  return h('div',{className:'yor-shell',style:{position:'fixed',inset:0,background:C.bg,overflow:'hidden',fontFamily:"'SF Pro Display','Segoe UI',system-ui,sans-serif"}},
     // WebGL canvas
     h('canvas',{ref:bgRef,style:{position:'absolute',inset:0,zIndex:0,width:'100%',height:'100%'}}),
     // Vignette overlay
-    h('div',{style:{position:'absolute',inset:0,zIndex:1,pointerEvents:'none',background:'radial-gradient(ellipse 80% 80% at 50% 50%, transparent 20%, rgba(2,4,9,.9) 100%)'}}),
+    h('div',{style:{position:'absolute',inset:0,zIndex:1,pointerEvents:'none',background:'radial-gradient(ellipse 80% 80% at 50% 50%, transparent 20%, rgba(0,0,0,.9) 100%)'}}),
     // Scanlines
     h('div',{style:{position:'absolute',inset:0,zIndex:1,pointerEvents:'none',backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px)'}}),
 
@@ -582,9 +611,9 @@ function App(){
     h('div',{style:{position:'relative',zIndex:10,width:'100%',height:'100%',display:'flex',flexDirection:'column'}},
 
       // ── HEADER ──
-      h('header',{style:{padding:'16px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(0,229,168,.07)',backdropFilter:'blur(20px)',animation:'fadeDown .8s ease both'}},
+      h('header',{className:'yor-header',style:{padding:'16px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(232,75,75,.07)',backdropFilter:'blur(20px)',animation:'fadeDown .8s ease both'}},
         h('div',{style:{display:'flex',alignItems:'center',gap:12}},
-          h('div',{style:{width:38,height:38,background:`linear-gradient(135deg,${C.primary},${C.secondary})`,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 24px rgba(0,229,168,.4),0 0 48px rgba(91,140,255,.2)`,flexShrink:0}},
+          h('div',{style:{width:38,height:38,background:`linear-gradient(135deg,${C.primary},${C.secondary})`,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 24px rgba(232,75,75,.4),0 0 48px rgba(255,138,127,.2)`,flexShrink:0}},
             h('svg',{width:22,height:22,viewBox:'0 0 24 24',fill:'none',stroke:'white',strokeWidth:1.5,strokeLinecap:'round'},
               h('circle',{cx:12,cy:12,r:8}),
               h('circle',{cx:12,cy:12,r:3,fill:'white',stroke:'none'}),
@@ -596,18 +625,18 @@ function App(){
           ),
           h('div',null,
             h('div',{style:{color:'white',fontWeight:700,fontSize:'1rem',letterSpacing:'-.02em'}},
-              'AI',h('span',{style:{color:C.primary}},' vs '),'REAL'
+              'YOR',h('span',{style:{color:C.primary}},' // '),'TEXTURE FORENSICS'
             ),
-            h('div',{style:{color:'rgba(255,255,255,.3)',fontSize:'.6rem',letterSpacing:'.12em',fontFamily:'monospace'}},'IMAGE DETECTION SYSTEM v2.4.1')
+            h('div',{style:{color:'rgba(255,255,255,.3)',fontSize:'.6rem',letterSpacing:'.12em',fontFamily:'monospace'}},'LOCAL INFERENCE // RBF SVM // SIGNAL ROOM')
           )
         ),
-        h('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+        h('div',{className:'yor-nav',style:{display:'flex',gap:6,alignItems:'center'}},
           ...['OVERVIEW','HISTORY','API','DOCS'].map(t=>h('button',{key:t,
             style:{background:'none',border:'none',color:'rgba(255,255,255,.3)',cursor:'pointer',fontSize:'.65rem',letterSpacing:'.1em',padding:'6px 10px',fontFamily:'monospace',transition:'color .2s'},
             onMouseEnter:e=>e.target.style.color=C.primary,
             onMouseLeave:e=>e.target.style.color='rgba(255,255,255,.3)'
           },t)),
-          h('div',{style:{display:'flex',alignItems:'center',gap:7,marginLeft:8,padding:'6px 12px',border:'1px solid rgba(0,229,168,.12)',borderRadius:6,background:'rgba(0,229,168,.04)'}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:7,marginLeft:8,padding:'6px 12px',border:'1px solid rgba(232,75,75,.12)',borderRadius:6,background:'rgba(232,75,75,.04)'}},
             h('div',{style:{width:7,height:7,borderRadius:'50%',background:C.primary,boxShadow:`0 0 8px ${C.primary}`,animation:'pulse 2s infinite'}}),
             h('span',{style:{color:'rgba(255,255,255,.4)',fontSize:'.6rem',fontFamily:'monospace'}},
               stage==='scanning'?'PROCESSING':'SYSTEM ACTIVE'
@@ -617,13 +646,13 @@ function App(){
       ),
 
       // ── MAIN ──
-      h('main',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',padding:'20px 24px',gap:20}},
+      h('main',{className:'yor-main',style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',padding:'20px 24px',gap:20}},
 
         // LEFT PANEL — Stats + Sparkline
-        (showStats||showTrend)&&h('div',{style:{width:170,display:'flex',flexDirection:'column',gap:10,flexShrink:0}},
+        (showStats||showTrend)&&h('div',{className:'yor-side-panel',style:{width:170,display:'flex',flexDirection:'column',gap:10,flexShrink:0}},
           showStats&&stats.map((s,i)=>h('div',{key:s.l,
             style:{padding:'12px 14px',background:'rgba(255,255,255,.025)',border:'1px solid rgba(255,255,255,.05)',borderRadius:10,animation:`slideLeft .6s ${.3+i*.1}s ease both`,cursor:'default',transition:'border-color .3s,transform .2s'},
-            onMouseEnter:e=>{e.currentTarget.style.borderColor='rgba(0,229,168,.2)';e.currentTarget.style.transform='scale(1.02)';},
+            onMouseEnter:e=>{e.currentTarget.style.borderColor='rgba(232,75,75,.2)';e.currentTarget.style.transform='scale(1.02)';},
             onMouseLeave:e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.05)';e.currentTarget.style.transform='scale(1)';}
           },
             h('div',{style:{color:'rgba(255,255,255,.3)',fontSize:'.58rem',letterSpacing:'.12em',fontFamily:'monospace',marginBottom:4}},s.l),
@@ -645,19 +674,19 @@ function App(){
         ),
 
         // CENTER — Holographic card with tilt
-        h('div',{ref:cardRef,onMouseMove:onCardMove,onMouseLeave:onCardLeave,style:{perspective:1200,width:460,flexShrink:0}},
+        h('div',{className:'yor-center-shell',ref:cardRef,onMouseMove:onCardMove,onMouseLeave:onCardLeave,style:{perspective:1200,width:460,flexShrink:0}},
           h('div',{style:{transform:`perspective(1200px) rotateX(${cardRot.x}deg) rotateY(${cardRot.y}deg)`,transformStyle:'preserve-3d',transition:'transform .05s linear'}},
-            h('div',{style:{
-              background:'rgba(4,6,14,.78)',
+            h('div',{className:'yor-card',style:{
+              background:'rgba(5,5,5,.78)',
               backdropFilter:'blur(40px) saturate(180%)',
-              border:'1px solid rgba(0,229,168,.13)',
+              border:'1px solid rgba(232,75,75,.13)',
               borderRadius:18,padding:'26px',
-              boxShadow:'0 0 80px rgba(0,229,168,.06),0 0 160px rgba(91,140,255,.04),inset 0 0 80px rgba(0,229,168,.015),0 40px 80px rgba(0,0,0,.6)',
+              boxShadow:'0 0 80px rgba(232,75,75,.06),0 0 160px rgba(255,138,127,.04),inset 0 0 80px rgba(232,75,75,.015),0 40px 80px rgba(0,0,0,.6)',
               position:'relative',overflow:'hidden',
               animation:glitch?'glitch .15s infinite':'breathe 4s infinite',
             }},
               // Glitch overlay
-              glitch&&h('div',{style:{position:'absolute',inset:0,background:'rgba(255,77,77,.06)',pointerEvents:'none',zIndex:50}}),
+              glitch&&h('div',{style:{position:'absolute',inset:0,background:'rgba(255,138,127,.06)',pointerEvents:'none',zIndex:50}}),
               // Shimmer sweep
               h('div',{style:{position:'absolute',top:0,left:0,right:0,bottom:0,overflow:'hidden',pointerEvents:'none',borderRadius:'inherit'}},
                 h('div',{style:{position:'absolute',top:0,width:'50%',height:'100%',background:'linear-gradient(90deg,transparent,rgba(255,255,255,.015),transparent)',animation:'shimmer 3s 2s infinite linear',zIndex:1}})
@@ -678,7 +707,7 @@ function App(){
 
               // Card header row
               h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}},
-                h('div',{style:{color:C.primary,fontSize:'.6rem',letterSpacing:'.18em',fontFamily:'monospace'}},'◈ NEURAL DETECTION ENGINE'),
+                h('div',{style:{color:C.primary,fontSize:'.6rem',letterSpacing:'.18em',fontFamily:'monospace'}},'◈ TEXTURE DETECTION ENGINE'),
                 h('div',{style:{display:'flex',alignItems:'center',gap:6}},
                   h('div',{style:{
                     width:6,height:6,borderRadius:'50%',
@@ -702,21 +731,21 @@ function App(){
                   onDrop:e=>{e.preventDefault();setDragging(false);processFile(e.dataTransfer.files[0]);},
                   style:{
                     display:'block',height:260,
-                    border:`1px dashed ${dragging?C.primary:'rgba(0,229,168,.25)'}`,
+                    border:`1px dashed ${dragging?C.primary:'rgba(232,75,75,.25)'}`,
                     borderRadius:10,cursor:'pointer',position:'relative',overflow:'hidden',
-                    background:dragging?'rgba(0,229,168,.04)':'rgba(0,229,168,.015)',
+                    background:dragging?'rgba(232,75,75,.04)':'rgba(232,75,75,.015)',
                     transition:'border-color .3s,background .3s',
-                    boxShadow:dragging?`0 0 30px rgba(0,229,168,.2)`:'none'
+                    boxShadow:dragging?`0 0 30px rgba(232,75,75,.2)`:'none'
                   }
                 },
                   h('input',{id:'fi',type:'file',accept:'image/*',onChange:e=>{processFile(e.target.files[0]);e.target.value='';},style:{display:'none'}}),
-                  burst&&h('div',{style:{position:'absolute',inset:0,background:`radial-gradient(circle,rgba(0,229,168,.4) 0%,transparent 65%)`,animation:'ripple .9s ease-out forwards',pointerEvents:'none'}}),
+                  burst&&h('div',{style:{position:'absolute',inset:0,background:`radial-gradient(circle,rgba(232,75,75,.4) 0%,transparent 65%)`,animation:'ripple .9s ease-out forwards',pointerEvents:'none'}}),
                   h('div',{style:{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none'}},
-                    h('div',{style:{position:'absolute',top:0,width:'40%',height:'100%',background:'linear-gradient(90deg,transparent,rgba(0,229,168,.05),transparent)',animation:'shimmer 4s infinite linear'}})
+                    h('div',{style:{position:'absolute',top:0,width:'40%',height:'100%',background:'linear-gradient(90deg,transparent,rgba(232,75,75,.05),transparent)',animation:'shimmer 4s infinite linear'}})
                   ),
                   h(FloatingParticles,{active:dragging}),
                   h('div',{style:{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14}},
-                    h('div',{style:{width:68,height:68,borderRadius:'50%',border:`1px solid rgba(0,229,168,.2)`,display:'flex',alignItems:'center',justifyContent:'center',animation:'float 3s infinite ease-in-out',boxShadow:`0 0 30px rgba(0,229,168,.08)`}},
+                    h('div',{style:{width:68,height:68,borderRadius:'50%',border:`1px solid rgba(232,75,75,.2)`,display:'flex',alignItems:'center',justifyContent:'center',animation:'float 3s infinite ease-in-out',boxShadow:`0 0 30px rgba(232,75,75,.08)`}},
                       h('svg',{width:30,height:30,viewBox:'0 0 24 24',fill:'none',stroke:C.primary,strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round'},
                         h('path',{d:'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4'}),
                         h('polyline',{points:'17 8 12 3 7 8'}),
@@ -762,13 +791,13 @@ function App(){
 
               // ── SCANNING STATE ──
               stage==='scanning'&&h('div',{key:'scanning',style:{animation:'fadeIn .3s ease'}},
-                h('div',{style:{height:260,borderRadius:10,overflow:'hidden',position:'relative',border:'1px solid rgba(0,229,168,.1)'}},
+                h('div',{style:{height:260,borderRadius:10,overflow:'hidden',position:'relative',border:'1px solid rgba(232,75,75,.1)'}},
                   h(ScanCanvas,{imageUrl,onComplete:onScanDone})
                 ),
                 h('div',{style:{marginTop:14,display:'flex',flexDirection:'column',gap:7}},
-                  ...['FREQUENCY DOMAIN ANALYSIS','GAN ARTIFACT DETECTION','METADATA VERIFICATION','NEURAL PATTERN MATCHING'].map((lbl,i)=>h('div',{key:lbl,style:{display:'flex',alignItems:'center',gap:8}},
+                  ...['TEXTURE FEATURE EXTRACTION','LBP + GLCM SIGNALS','SVM PROBABILITY ESTIMATE','DATASET-BOUND VERDICT'].map((lbl,i)=>h('div',{key:lbl,style:{display:'flex',alignItems:'center',gap:8}},
                     h('div',{style:{flex:1,height:2,background:`linear-gradient(90deg,${C.primary},${C.secondary})`,borderRadius:1,opacity:.7,boxShadow:`0 0 6px ${C.primary}`,animation:`grow .4s ${i*.15}s ease both`}}),
-                    h('span',{style:{color:'rgba(0,229,168,.7)',fontSize:'.58rem',fontFamily:'monospace',letterSpacing:'.08em',minWidth:200}},lbl)
+                    h('span',{style:{color:'rgba(232,75,75,.7)',fontSize:'.58rem',fontFamily:'monospace',letterSpacing:'.08em',minWidth:200}},lbl)
                   ))
                 )
               ),
@@ -803,16 +832,16 @@ function App(){
                   )
                 ),
                 !hideResetButton&&h('button',{onClick:reset,
-                  style:{marginTop:14,width:'100%',padding:'11px',background:'rgba(0,229,168,.07)',border:`1px solid rgba(0,229,168,.22)`,borderRadius:9,color:C.primary,cursor:'pointer',fontSize:'.7rem',fontFamily:'monospace',letterSpacing:'.15em',transition:'all .3s'},
-                  onMouseEnter:e=>{e.target.style.background='rgba(0,229,168,.14)';e.target.style.boxShadow=`0 0 25px rgba(0,229,168,.25)`;},
-                  onMouseLeave:e=>{e.target.style.background='rgba(0,229,168,.07)';e.target.style.boxShadow='none';}
+                  style:{marginTop:14,width:'100%',padding:'11px',background:'rgba(232,75,75,.07)',border:`1px solid rgba(232,75,75,.22)`,borderRadius:9,color:C.primary,cursor:'pointer',fontSize:'.7rem',fontFamily:'monospace',letterSpacing:'.15em',transition:'all .3s'},
+                  onMouseEnter:e=>{e.target.style.background='rgba(232,75,75,.14)';e.target.style.boxShadow=`0 0 25px rgba(232,75,75,.25)`;},
+                  onMouseLeave:e=>{e.target.style.background='rgba(232,75,75,.07)';e.target.style.boxShadow='none';}
                 },'↺  ANALYZE ANOTHER IMAGE')
               )
             )
           )
         ),
         // RIGHT PANEL — Recent scans + system status
-        (showRecent||showSystem)&&h('div',{style:{width:170,display:'flex',flexDirection:'column',gap:10,flexShrink:0}},
+        (showRecent||showSystem)&&h('div',{className:'yor-side-panel',style:{width:170,display:'flex',flexDirection:'column',gap:10,flexShrink:0}},
           showRecent&&h('div',{style:{padding:'12px 14px',background:'rgba(255,255,255,.02)',border:'1px solid rgba(255,255,255,.05)',borderRadius:10,animation:'slideRight .6s .3s ease both'}},
             h('div',{style:{color:'rgba(255,255,255,.28)',fontSize:'.58rem',letterSpacing:'.1em',fontFamily:'monospace',marginBottom:8}},'RECENT SCANS'),
             recentScans.map((s,i)=>h('div',{key:i,
@@ -826,7 +855,7 @@ function App(){
             ))
           ),
           showSystem&&systemStatus.map((it,i)=>h('div',{key:it.l,
-            style:{padding:'9px 12px',background:'rgba(255,255,255,.02)',border:`1px solid ${it.a?'rgba(0,229,168,.12)':'rgba(255,255,255,.04)'}`,borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center',animation:`slideRight .6s ${.4+i*.07}s ease both`,transition:'border-color .5s'}
+            style:{padding:'9px 12px',background:'rgba(255,255,255,.02)',border:`1px solid ${it.a?'rgba(232,75,75,.12)':'rgba(255,255,255,.04)'}`,borderRadius:8,display:'flex',justifyContent:'space-between',alignItems:'center',animation:`slideRight .6s ${.4+i*.07}s ease both`,transition:'border-color .5s'}
           },
             h('span',{style:{color:'rgba(255,255,255,.35)',fontSize:'.58rem',fontFamily:'monospace',letterSpacing:'.06em'}},it.l),
             h('div',{style:{display:'flex',alignItems:'center',gap:5}},
@@ -838,7 +867,7 @@ function App(){
       ),
 
       // ── FOOTER ──
-      showFooter&&h('footer',{style:{padding:'8px 28px',borderTop:'1px solid rgba(0,229,168,.05)',display:'flex',justifyContent:'space-between',alignItems:'center',backdropFilter:'blur(20px)',animation:'fadeUp .8s .5s ease both'}},
+      showFooter&&h('footer',{style:{padding:'8px 28px',borderTop:'1px solid rgba(232,75,75,.05)',display:'flex',justifyContent:'space-between',alignItems:'center',backdropFilter:'blur(20px)',animation:'fadeUp .8s .5s ease both'}},
         footerItems.length>0?h('div',{style:{display:'flex',gap:20}},
           footerItems.map((t,i)=>h('span',{key:i,style:{color:'rgba(255,255,255,.18)',fontSize:'.58rem',fontFamily:'monospace',letterSpacing:'.07em'}},t))
         ):h('div',null),
@@ -867,14 +896,26 @@ ReactDOM.render(React.createElement(App), document.getElementById('root'));
 
 
 def render_ui(data):
-    return UI_TEMPLATE.replace("__INITIAL_DATA__", json.dumps(data))
+    template = UI_TEMPLATE.replace("__INITIAL_DATA__", json.dumps(data))
+    for marker, value in {
+        "__YOR_VOID__": YOR_COLORS["void"],
+        "__YOR_PANEL__": YOR_COLORS["panel"],
+        "__YOR_CRIMSON__": YOR_COLORS["crimson"],
+        "__YOR_DEEP__": YOR_COLORS["deepCrimson"],
+        "__YOR_SIGNAL__": YOR_COLORS["signal"],
+        "__YOR_PAPER__": YOR_COLORS["paper"],
+        "__YOR_MUTED__": YOR_COLORS["muted"],
+        "__YOR_POSITIVE__": YOR_SEMANTIC["positive"],
+    }.items():
+        template = template.replace(marker, value)
+    return template
 
 
 # -------------------------
 # Streamlit Shell
 # -------------------------
 st.set_page_config(
-    page_title="AI vs Real Image Detector",
+    page_title="YOR // Texture Forensics",
     page_icon="🖼️",
     layout="wide"
 )
@@ -911,18 +952,18 @@ st.markdown(
       div[data-testid="stButton"] > button {
         width: 100%;
         padding: 11px;
-        background: rgba(0,229,168,.07);
-        border: 1px solid rgba(0,229,168,.22);
+        background: rgba(232,75,75,.07);
+        border: 1px solid rgba(232,75,75,.22);
         border-radius: 9px;
-        color: #00E5A8;
+        color: #e84b4b;
         cursor: pointer;
         font-size: .7rem;
         font-family: monospace;
         letter-spacing: .15em;
       }
       div[data-testid="stButton"] > button:hover {
-        background: rgba(0,229,168,.14);
-        box-shadow: 0 0 25px rgba(0,229,168,.25);
+        background: rgba(232,75,75,.14);
+        box-shadow: 0 0 25px rgba(232,75,75,.25);
       }
     </style>
     """,

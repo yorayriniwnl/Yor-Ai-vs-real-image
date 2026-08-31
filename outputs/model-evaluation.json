@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "evaluation": "deterministic 80/20 stratified holdout",
+  "random_state": 42,
+  "feature_length": 17,
+  "total_samples": 533,
+  "train_samples": 426,
+  "test_samples": 107,
+  "class_counts": {
+    "real": 258,
+    "ai": 275
+  },
+  "accuracy": 0.7850467289719626,
+  "classification_report": {
+    "0": {
+      "precision": 0.8222222222222222,
+      "recall": 0.7115384615384616,
+      "f1-score": 0.7628865979381443,
+      "support": 52.0
+    },
+    "1": {
+      "precision": 0.7580645161290323,
+      "recall": 0.8545454545454545,
+      "f1-score": 0.8034188034188035,
+      "support": 55.0
+    },
+    "accuracy": 0.7850467289719626,
+    "macro avg": {
+      "precision": 0.7901433691756272,
+      "recall": 0.7830419580419581,
+      "f1-score": 0.7831527006784739,
+      "support": 107.0
+    },
+    "weighted avg": {
+      "precision": 0.7892439620808629,
+      "recall": 0.7850467289719626,
+      "f1-score": 0.7837209091665205,
+      "support": 107.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      37,
+      15
+    ],
+    [
+      8,
+      47
+    ]
+  ],
+  "test_paths_sha256": "f7f45673c5295d76bd2571c78edc1c914c923006f2e82fbd9521249c33ea83a8",
+  "limitations": [
+    "The holdout is drawn from the checked-in curated dataset and is not a measure of universal detector performance.",
+    "The classifier uses handcrafted grayscale texture features and can fail on images outside this distribution."
+  ]
+}

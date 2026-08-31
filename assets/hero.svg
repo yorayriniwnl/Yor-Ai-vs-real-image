@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 720" role="img" aria-labelledby="title desc">
+  <title id="title">YOR Texture Forensics</title>
+  <desc id="desc">YOR visual system title card for a classical texture-based image classifier with a 78.5 percent deterministic holdout accuracy.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#000000"/><stop offset="0.65" stop-color="#050505"/><stop offset="1" stop-color="#2a0505"/></linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#671515"/><stop offset="0.5" stop-color="#e84b4b"/><stop offset="1" stop-color="#ff8a7f"/></linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#e84b4b" stroke-opacity="0.14"/></pattern>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1600" height="720" fill="url(#bg)"/><rect width="1600" height="720" fill="url(#grid)" opacity="0.62"/>
+  <path d="M0 608H1600" stroke="#e84b4b" stroke-opacity="0.22"/><path d="M0 608H990" stroke="url(#rail)" stroke-width="6" filter="url(#glow)"/>
+  <circle cx="1300" cy="246" r="186" fill="none" stroke="#671515"/><circle cx="1300" cy="246" r="130" fill="none" stroke="#e84b4b" stroke-opacity="0.42"/><circle cx="1300" cy="246" r="5" fill="#ff8a7f" filter="url(#glow)"/>
+  <path d="M1110 246h380M1300 56v380" stroke="#c4c4c4" stroke-opacity="0.12"/>
+  <g font-family="DM Mono, Consolas, monospace">
+    <text x="92" y="92" font-size="18" letter-spacing="5" fill="#ff8a7f">YOR // APPLIED ML ARCHIVE // SIGNAL 02</text>
+    <text x="92" y="256" font-family="Georgia, serif" font-size="88" font-weight="700" fill="#f5eaea">TEXTURE</text>
+    <text x="92" y="350" font-family="Georgia, serif" font-size="88" font-weight="700" fill="#e84b4b">FORENSICS</text>
+    <text x="96" y="414" font-size="21" letter-spacing="2" fill="#c4c4c4">Handcrafted grayscale features for a probability-aware synthetic-image estimate.</text>
+    <text x="96" y="474" font-size="15" letter-spacing="3" fill="#ff8a7f">VERIFIED HOLDOUT // 80 / 20 // RANDOM STATE 42</text>
+    <text x="96" y="520" font-size="15" letter-spacing="3" fill="#c4c4c4">LOCAL INFERENCE / RBF SVM / NO AUTHENTICITY GUARANTEE</text>
+  </g>
+  <g font-family="DM Mono, Consolas, monospace">
+    <rect x="96" y="648" width="230" height="42" rx="4" fill="#050505" stroke="#e84b4b" stroke-opacity="0.54"/><rect x="344" y="648" width="230" height="42" rx="4" fill="#050505" stroke="#e84b4b" stroke-opacity="0.54"/><rect x="592" y="648" width="230" height="42" rx="4" fill="#050505" stroke="#e84b4b" stroke-opacity="0.54"/>
+    <text x="116" y="675" font-size="15" fill="#f5eaea">78.5% ACCURACY</text><text x="364" y="675" font-size="15" fill="#f5eaea">17 FEATURES</text><text x="612" y="675" font-size="15" fill="#f5eaea">533 SAMPLES</text>
+  </g>
+</svg>
