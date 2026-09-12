@@ -7,3 +7,5 @@
 !requirements.txt
 !svm_model.pkl
 !scaler.pkl
+!design/
+!design/yor-tokens.json
