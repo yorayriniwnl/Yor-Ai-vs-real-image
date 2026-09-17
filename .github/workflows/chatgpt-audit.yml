@@ -1,0 +1,53 @@
+name: ChatGPT Audit
+
+on:
+  push:
+    branches:
+      - chatgpt/audit-20260917
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Compile Python sources
+        run: python -m compileall -q .
+      - name: Run deterministic model evaluation
+        run: python scripts/evaluate_model.py
+      - name: Verify evaluation artifact shape
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('outputs/model-evaluation.json')
+          data=json.loads(p.read_text())
+          assert data['total_samples'] == 533
+          assert data['train_samples'] == 426
+          assert data['test_samples'] == 107
+          assert 0 <= data['accuracy'] <= 1
+          print(data['accuracy'])
+          PY
+      - name: Flask route smoke test
+        run: |
+          python - <<'PY'
+          from index import app
+          c=app.test_client()
+          r=c.get('/')
+          assert r.status_code == 200, r.status_code
+          assert b'Texture Forensics' in r.data
+          print('GET / OK')
+          PY
