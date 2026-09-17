@@ -1,26 +1,21 @@
 #!/usr/bin/env python3
-"""Reproduce the checked-in detector's deterministic held-out evaluation."""
+"""Reproduce the detector's deterministic held-out evaluation without exporting artifacts."""
 
 from __future__ import annotations
 
 import json
-import hashlib
 from pathlib import Path
+import sys
 
 import cv2
 import numpy as np
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.svm import SVC
-
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from inference import extract_features_from_gray
+from training_pipeline import train_model_from_arrays
 
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".avif"}
@@ -50,47 +45,19 @@ def load_samples() -> tuple[np.ndarray, np.ndarray, list[str]]:
 
 def main() -> int:
     X, y, paths = load_samples()
-    X_train, X_test, y_train, y_test, _, paths_test = train_test_split(
-        X,
-        y,
-        paths,
-        test_size=0.2,
-        random_state=42,
-        stratify=y,
-    )
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-    model = SVC(kernel="rbf", class_weight="balanced")
-    model.fit(X_train_scaled, y_train)
-    predictions = model.predict(X_test_scaled)
+    result = train_model_from_arrays(X, y, paths, test_size=0.2, random_state=42)
 
-    report = classification_report(y_test, predictions, output_dict=True, zero_division=0)
-    result = {
-        "schema_version": 1,
-        "evaluation": "deterministic 80/20 stratified holdout",
-        "random_state": 42,
-        "feature_length": int(X.shape[1]),
-        "total_samples": int(len(y)),
-        "train_samples": int(len(y_train)),
-        "test_samples": int(len(y_test)),
-        "class_counts": {
-            "real": int((y == 0).sum()),
-            "ai": int((y == 1).sum()),
-        },
-        "accuracy": float(accuracy_score(y_test, predictions)),
-        "classification_report": report,
-        "confusion_matrix": confusion_matrix(y_test, predictions).tolist(),
-        "test_paths_sha256": hashlib.sha256("\n".join(sorted(paths_test)).encode("utf-8")).hexdigest(),
-        "limitations": [
-            "The holdout is drawn from the checked-in curated dataset and is not a measure of universal detector performance.",
-            "The classifier uses handcrafted grayscale texture features and can fail on images outside this distribution.",
-        ],
-    }
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    OUTPUT_PATH.write_text(json.dumps(result.metadata, indent=2) + "\n", encoding="utf-8")
     print(f"evaluation written: {OUTPUT_PATH}")
-    print(f"samples={result['total_samples']} train={result['train_samples']} test={result['test_samples']} accuracy={result['accuracy']:.4f}")
+    print(
+        "samples={total} train={train} test={test} accuracy={accuracy:.4f}".format(
+            total=result.metadata["total_samples"],
+            train=result.metadata["train_samples"],
+            test=result.metadata["test_samples"],
+            accuracy=result.metadata["accuracy"],
+        )
+    )
     return 0
 
 
