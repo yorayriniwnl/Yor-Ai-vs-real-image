@@ -12,10 +12,10 @@ The reproducible evaluation is [`outputs/model-evaluation.json`](outputs/model-e
 
 | Measure | Result |
 | --- | ---: |
-| Total supported samples | 533 |
-| Real / AI samples | 258 / 275 |
-| Train / holdout samples | 426 / 107 |
-| Held-out accuracy | 78.5% |
+| Total supported samples | 534 |
+| Real / AI samples | 259 / 275 |
+| Train / holdout samples | 427 / 107 |
+| Held-out accuracy | 85.05% |
 | Feature vector length | 17 |
 
 This is one holdout from one curated dataset. It is not a universal detector benchmark, and the result should not be used to make consequential decisions about an image or its creator.
@@ -75,7 +75,7 @@ The dataset directory is checked in for reproducibility; verify the source and l
 ## Source and limitations
 
 - The dataset is split into `dataset/real` and `dataset/ai`; exact source/licensing records should be completed before broader redistribution.
-- The 78.5% evaluation is image-level and dataset-specific. It does not establish robustness to new generators, compression, screenshots, edits, social-media transforms, or adversarial examples.
+- The 85.05% evaluation is image-level and dataset-specific. It does not establish robustness to new generators, compression, screenshots, edits, social-media transforms, or adversarial examples.
 - The currently checked-in deployment binaries are not yet cryptographically tied to that evaluation snapshot.
 - Confidence is derived from the model’s probability/decision output. It is not calibrated as a real-world probability of authorship.
 - The model uses handcrafted grayscale features. The project does not claim deep-learning performance, provenance detection, or forensic certainty.
