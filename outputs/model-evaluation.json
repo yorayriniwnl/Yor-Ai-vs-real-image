@@ -1,54 +1,61 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "protocol_version": 2,
   "evaluation": "deterministic 80/20 stratified holdout",
   "random_state": 42,
+  "scaler_fit_scope": "training_partition_only",
   "feature_length": 17,
-  "total_samples": 533,
-  "train_samples": 426,
+  "total_samples": 534,
+  "train_samples": 427,
   "test_samples": 107,
   "class_counts": {
-    "real": 258,
+    "real": 259,
     "ai": 275
   },
-  "accuracy": 0.7850467289719626,
+  "accuracy": 0.8504672897196262,
   "classification_report": {
     "0": {
-      "precision": 0.8222222222222222,
-      "recall": 0.7115384615384616,
-      "f1-score": 0.7628865979381443,
-      "support": 52.0
+      "precision": 0.8913043478260869,
+      "recall": 0.7884615384615384,
+      "f1-score": 0.8367346938775511,
+      "support": 52
     },
     "1": {
-      "precision": 0.7580645161290323,
-      "recall": 0.8545454545454545,
-      "f1-score": 0.8034188034188035,
-      "support": 55.0
+      "precision": 0.819672131147541,
+      "recall": 0.9090909090909091,
+      "f1-score": 0.8620689655172413,
+      "support": 55
     },
-    "accuracy": 0.7850467289719626,
+    "accuracy": 0.8504672897196262,
     "macro avg": {
-      "precision": 0.7901433691756272,
-      "recall": 0.7830419580419581,
-      "f1-score": 0.7831527006784739,
-      "support": 107.0
+      "precision": 0.855488239486814,
+      "recall": 0.8487762237762237,
+      "f1-score": 0.8494018296973962,
+      "support": 107
     },
     "weighted avg": {
-      "precision": 0.7892439620808629,
-      "recall": 0.7850467289719626,
-      "f1-score": 0.7837209091665205,
-      "support": 107.0
+      "precision": 0.8544840495333764,
+      "recall": 0.8504672897196262,
+      "f1-score": 0.8497569830381396,
+      "support": 107
     }
   },
   "confusion_matrix": [
     [
-      37,
-      15
+      41,
+      11
     ],
     [
-      8,
-      47
+      5,
+      50
     ]
   ],
-  "test_paths_sha256": "f7f45673c5295d76bd2571c78edc1c914c923006f2e82fbd9521249c33ea83a8",
+  "test_paths_sha256": "e419628f73410517f358897cf5015b2e29b176a9391c7b5ed5602dc193e5c84c",
+  "model": {
+    "class": "SVC",
+    "kernel": "rbf",
+    "class_weight": "balanced"
+  },
   "limitations": [
     "The holdout is drawn from the checked-in curated dataset and is not a measure of universal detector performance.",
     "The classifier uses handcrafted grayscale texture features and can fail on images outside this distribution."
