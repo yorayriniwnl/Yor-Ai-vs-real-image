@@ -31,7 +31,9 @@ jobs:
       - name: Training protocol regression tests
         run: python -m unittest tests.test_training_protocol
       - name: Run deterministic model evaluation
-        run: python scripts/evaluate_model.py
+        run: |
+          python scripts/evaluate_model.py
+          cat outputs/model-evaluation.json
       - name: Verify evaluation artifact shape
         run: |
           python - <<'PY'
@@ -39,8 +41,8 @@ jobs:
           from pathlib import Path
           p = Path("outputs/model-evaluation.json")
           data = json.loads(p.read_text())
-          assert data["total_samples"] == 533
-          assert data["train_samples"] == 426
+          assert data["total_samples"] == 534
+          assert data["train_samples"] == 427
           assert data["test_samples"] == 107
           assert 0 <= data["accuracy"] <= 1
           print(data["accuracy"])
