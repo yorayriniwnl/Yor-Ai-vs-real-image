@@ -74,7 +74,7 @@ The dataset directory is checked in for reproducibility; verify the source and l
 
 ## Source and limitations
 
-- The dataset is split into `dataset/real` and `dataset/ai`; exact source/licensing records should be completed before broader redistribution.
+- The dataset is split into `dataset/real` and `dataset/ai`; exact source/licensing records are tracked as incomplete in [`DATA_PROVENANCE.md`](DATA_PROVENANCE.md). Do not assume redistribution clearance from repository availability.
 - The 85.05% evaluation is image-level and dataset-specific. It does not establish robustness to new generators, compression, screenshots, edits, social-media transforms, or adversarial examples.
 - The currently checked-in deployment binaries are not yet cryptographically tied to that evaluation snapshot.
 - Confidence is derived from the model’s probability/decision output. It is not calibrated as a real-world probability of authorship.
