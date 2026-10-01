@@ -16,6 +16,39 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+      - name: Reject unsupported new dataset media
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          python - <<'PY'
+          import subprocess
+          from pathlib import Path
+
+          base = "origin/${{ github.base_ref }}"
+          added = subprocess.check_output(
+              ["git", "diff", "--name-only", "--diff-filter=A", f"{base}...HEAD", "--", "dataset"],
+              text=True,
+          ).splitlines()
+
+          allowed = {".jpg", ".jpeg", ".png", ".webp", ".avif"}
+          limit = 6 * 1024 * 1024
+          violations = []
+          for name in added:
+              path = Path(name)
+              if not path.is_file():
+                  continue
+              suffix = path.suffix.lower()
+              if suffix not in allowed:
+                  violations.append(f"unsupported dataset media: {name}")
+                  continue
+              if path.stat().st_size > limit:
+                  violations.append(f"dataset file exceeds 6 MiB: {name}")
+
+          assert not violations, "\n".join(violations)
+          print(f"Checked {len(added)} newly added dataset files")
+          PY
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
