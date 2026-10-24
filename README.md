@@ -14,6 +14,23 @@
 
 Texture Forensics is a small image-classification system that extracts grayscale texture, noise, and structure features before scoring them with an RBF Support Vector Machine. It is a research/demo detector, not an authenticity oracle: images outside the curated dataset can produce confident mistakes.
 
+<!-- YOR REDLINE / EXPERIENCE V2 -->
+
+<a id="system-map"></a>
+## System map
+
+<div align="center"><picture><source media="(max-width: 600px)" srcset="docs/yor-redline-system-mobile.svg"/><img src="docs/yor-redline-system.svg" width="100%" alt="Image texture forensics: Input image to Texture features to SVM inference to Confidence and caveats"/></picture></div>
+
+| Project signal | Documented scope |
+| :--- | :--- |
+| **Current maturity** | RESEARCH / DEMO |
+| **Technical focus** | LBP and GLCM texture features, an RBF SVM, and documented held-out evaluation. |
+| **Evidence boundary** | Model accuracy is dataset-bound; deployment artifacts and calibration require separate provenance checks. |
+
+**Navigate:** [Current evidence](#current-evidence) · [Product surface](#product-surface) · [Feature and inference flow](#feature-and-inference-flow) · [Run locally](#run-locally) · [Source and limitations](#source-and-limitations) · [Repository map](#repository-map) · [Status](#status)
+
+<!-- END YOR REDLINE / EXPERIENCE V2 -->
+
 ## Current evidence
 
 The reproducible evaluation is [`outputs/model-evaluation.json`](outputs/model-evaluation.json). It uses the checked-in dataset, a deterministic stratified 80/20 split, `random_state=42`, an RBF SVM, and a scaler fitted on the training partition only.
