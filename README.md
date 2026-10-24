@@ -1,6 +1,14 @@
-# YOR // Texture Forensics
+<!-- YOR REDLINE / README COVER V1 -->
+<div align="center">
 
-![YOR Texture Forensics](assets/hero.svg)
+![Yor-Ai-vs-real-image | YOR REDLINE](docs/yor-redline-cover.svg)
+
+<sub><strong>YOR / PROJECT DOSSIER</strong> · <a href="https://github.com/yorayriniwnl">GitHub</a> · <a href="https://yorayriniwnl.in">Portfolio</a></sub>
+
+</div>
+<!-- END YOR REDLINE -->
+
+# YOR // Texture Forensics
 
 `VERIFIED HOLDOUT` · `INFERENCE DEMO` · `ARTIFACT LINEAGE PENDING`
 
